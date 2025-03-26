@@ -4,43 +4,42 @@ import (
 	"aigouda/config"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt"
 )
 
-type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	jwt.RegisteredClaims
-}
+// GenerateToken 生成JWT token
+func GenerateToken(userID uint) (string, error) {
+	// 创建token
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["user_id"] = userID
+	claims["exp"] = time.Now().Add(24 * time.Hour).Unix() // 设置24小时过期
 
-func GenerateToken(userID uint, username, role string) (string, error) {
-	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		Role:     role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(config.GlobalConfig.JWT.Expire))),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
+	// 签名token
+	tokenString, err := token.SignedString([]byte(config.GlobalConfig.JWT.Secret))
+	if err != nil {
+		return "", err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.GlobalConfig.JWT.Secret))
+	return tokenString, nil
 }
 
-func ParseToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+// ParseToken 解析JWT token
+func ParseToken(tokenString string) (uint, error) {
+	// 解析token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(config.GlobalConfig.JWT.Secret), nil
 	})
 
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	// 验证token
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID := uint(claims["user_id"].(float64))
+		return userID, nil
 	}
 
-	return nil, jwt.ErrSignatureInvalid
+	return 0, jwt.ErrSignatureInvalid
 } 

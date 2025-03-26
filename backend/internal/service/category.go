@@ -3,7 +3,6 @@ package service
 import (
 	"aigouda/internal/model"
 	"aigouda/internal/repository"
-	"errors"
 )
 
 type CategoryService struct {
@@ -28,47 +27,53 @@ type UpdateCategoryRequest struct {
 	ParentID    *uint   `json:"parent_id"`
 }
 
-// List 获取分类列表
-func (s *CategoryService) List(page, pageSize int, search string) ([]model.Category, int64, error) {
+// GetCategoryList 获取分类列表
+func GetCategoryList(page, pageSize int, keyword string) ([]model.Category, int64, error) {
 	offset := (page - 1) * pageSize
-	categories, total, err := s.categoryRepo.List(offset, pageSize, search)
+	var categories []model.Category
+	var total int64
+
+	query := repository.DB.Model(&model.Category{})
+	if keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
+	}
+
+	err := query.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
+	err = query.Offset(offset).Limit(pageSize).Find(&categories).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
 	return categories, total, nil
 }
 
-// Get 获取单个分类
-func (s *CategoryService) Get(id uint) (*model.Category, error) {
-	category, err := s.categoryRepo.GetByID(id)
+// GetCategory 获取分类详情
+func GetCategory(id uint) (*model.Category, error) {
+	var category model.Category
+	err := repository.DB.First(&category, id).Error
 	if err != nil {
 		return nil, err
 	}
-	return category, nil
+	return &category, nil
 }
 
-// Create 创建分类
-func (s *CategoryService) Create(category *model.Category) error {
-	if category.Name == "" {
-		return errors.New("分类名称不能为空")
-	}
-	return s.categoryRepo.Create(category)
+// CreateCategory 创建分类
+func CreateCategory(category *model.Category) error {
+	return repository.DB.Create(category).Error
 }
 
-// Update 更新分类
-func (s *CategoryService) Update(category *model.Category) error {
-	if category.ID == 0 {
-		return errors.New("分类ID不能为空")
-	}
-	if category.Name == "" {
-		return errors.New("分类名称不能为空")
-	}
-	return s.categoryRepo.Update(category)
+// UpdateCategory 更新分类
+func UpdateCategory(category *model.Category) error {
+	return repository.DB.Save(category).Error
 }
 
-// Delete 删除分类
-func (s *CategoryService) Delete(id uint) error {
-	return s.categoryRepo.Delete(id)
+// DeleteCategory 删除分类
+func DeleteCategory(id uint) error {
+	return repository.DB.Delete(&model.Category{}, id).Error
 }
 
 // GetProducts 获取分类下的商品

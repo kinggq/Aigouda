@@ -28,10 +28,16 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.test
 
 # 系统文件
 .DS_Store
 Thumbs.db
 
 # 上传文件
-uploads/ 
+uploads/
+
+# Railway
+.railway/ 

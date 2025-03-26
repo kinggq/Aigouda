@@ -3,6 +3,7 @@ package handler
 import (
 	"aigouda/internal/model"
 	"aigouda/internal/service"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -10,26 +11,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ProductHandler struct {
-	productService *service.ProductService
-}
-
-func NewProductHandler() *ProductHandler {
-	return &ProductHandler{
-		productService: service.NewProductService(),
+// ProductList 获取商品列表
+func ProductList(c *gin.Context) {
+	var req struct {
+		Page     int    `json:"page" binding:"required,min=1"`
+		PageSize int    `json:"pageSize" binding:"required,min=1,max=50"`
+		Keyword  string `json:"keyword"`
 	}
-}
 
-// List 获取商品列表
-func (h *ProductHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	search := c.Query("search")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误",
+		})
+		return
+	}
 
-	products, total, err := h.productService.List(page, pageSize, search)
+	products, total, err := service.GetProductList(req.Page, req.PageSize, req.Keyword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
 			"message": err.Error(),
 		})
 		return
@@ -37,26 +38,30 @@ func (h *ProductHandler) List(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
-		"data": products,
-		"total": total,
+		"data": gin.H{
+			"list":     products,
+			"total":    total,
+			"page":     req.Page,
+			"pageSize": req.PageSize,
+		},
 	})
 }
 
-// Get 获取单个商品
-func (h *ProductHandler) Get(c *gin.Context) {
+// GetProduct 获取商品详情
+func GetProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的商品ID",
 		})
 		return
 	}
 
-	product, err := h.productService.Get(uint(id))
+	product, err := service.GetProduct(uint(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
@@ -68,37 +73,38 @@ func (h *ProductHandler) Get(c *gin.Context) {
 	})
 }
 
-// Create 创建商品
-func (h *ProductHandler) Create(c *gin.Context) {
+// CreateProduct 创建商品
+func CreateProduct(c *gin.Context) {
 	var product model.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": err.Error(),
+			"code":    400,
+			"message": "请求参数错误",
 		})
 		return
 	}
 
-	if err := h.productService.Create(&product); err != nil {
+	if err := service.CreateProduct(&product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"data": product,
+		"code":    0,
+		"message": "创建成功",
+		"data":    product,
 	})
 }
 
-// Update 更新商品
-func (h *ProductHandler) Update(c *gin.Context) {
+// UpdateProduct 更新商品
+func UpdateProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的商品ID",
 		})
 		return
@@ -107,59 +113,60 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var product model.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": err.Error(),
+			"code":    400,
+			"message": "请求参数错误",
 		})
 		return
 	}
 
 	product.ID = uint(id)
-	if err := h.productService.Update(&product); err != nil {
+	if err := service.UpdateProduct(&product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"data": product,
+		"code":    0,
+		"message": "更新成功",
+		"data":    product,
 	})
 }
 
-// Delete 删除商品
-func (h *ProductHandler) Delete(c *gin.Context) {
+// DeleteProduct 删除商品
+func DeleteProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的商品ID",
 		})
 		return
 	}
 
-	if err := h.productService.Delete(uint(id)); err != nil {
+	if err := service.DeleteProduct(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
+		"code":    0,
 		"message": "删除成功",
 	})
 }
 
-// UploadImage 上传商品图片
-func (h *ProductHandler) UploadImage(c *gin.Context) {
+// UploadProductImage 上传商品图片
+func UploadProductImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": "请选择要上传的图片",
+			"code":    400,
+			"message": "请选择要上传的文件",
 		})
 		return
 	}
@@ -168,28 +175,30 @@ func (h *ProductHandler) UploadImage(c *gin.Context) {
 	ext := filepath.Ext(file.Filename)
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": "只支持 jpg、jpeg、png 格式的图片",
+			"code":    400,
+			"message": "只支持jpg、jpeg、png格式的图片",
 		})
 		return
 	}
 
-	// 检查文件大小（限制为 2MB）
-	if file.Size > 2<<20 {
+	// 检查文件大小（限制为2MB）
+	if file.Size > 2*1024*1024 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": "图片大小不能超过 2MB",
+			"code":    400,
+			"message": "图片大小不能超过2MB",
 		})
 		return
 	}
+
+	// 生成文件名
+	filename := fmt.Sprintf("%d%s", file.Size, ext)
+	filepath := filepath.Join("uploads", "products", filename)
 
 	// 保存文件
-	filename := filepath.Base(file.Filename)
-	dst := "uploads/products/" + filename
-	if err := c.SaveUploadedFile(file, dst); err != nil {
+	if err := c.SaveUploadedFile(file, filepath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
-			"message": "保存图片失败",
+			"code":    500,
+			"message": "文件上传失败",
 		})
 		return
 	}
@@ -197,7 +206,7 @@ func (h *ProductHandler) UploadImage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"url": "/uploads/products/" + filename,
+			"url": "/" + filepath,
 		},
 	})
 } 

@@ -36,6 +36,58 @@ type UpdateProductRequest struct {
 	Tags         *[]string `json:"tags"`
 }
 
+// GetProductList 获取商品列表
+func GetProductList(page, pageSize int, keyword string) ([]model.Product, int64, error) {
+	offset := (page - 1) * pageSize
+	
+	// 构建查询条件
+	query := repository.DB.Model(&model.Product{})
+	
+	// 添加关键词搜索
+	if keyword != "" {
+		query = query.Where("title LIKE ?", "%"+keyword+"%")
+	}
+	
+	// 获取总数
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// 获取分页数据
+	var products []model.Product
+	if err := query.Offset(offset).Limit(pageSize).Find(&products).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return products, total, nil
+}
+
+// GetProduct 获取商品详情
+func GetProduct(id uint) (*model.Product, error) {
+	var product model.Product
+	err := repository.DB.Preload("Category").First(&product, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &product, nil
+}
+
+// CreateProduct 创建商品
+func CreateProduct(product *model.Product) error {
+	return repository.DB.Create(product).Error
+}
+
+// UpdateProduct 更新商品
+func UpdateProduct(product *model.Product) error {
+	return repository.DB.Save(product).Error
+}
+
+// DeleteProduct 删除商品
+func DeleteProduct(id uint) error {
+	return repository.DB.Delete(&model.Product{}, id).Error
+}
+
 // List 获取商品列表
 func (s *ProductService) List(page, pageSize int, search string) ([]model.Product, int64, error) {
 	offset := (page - 1) * pageSize

@@ -2,14 +2,16 @@ package main
 
 import (
 	"aigouda/config"
-	"aigouda/internal/router"
 	"aigouda/internal/repository"
+	"aigouda/internal/router"
 	"log"
 )
 
 func main() {
-	// 初始化配置
-	config.Init()
+	// 加载配置
+	if err := config.LoadConfig(); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
 	// 初始化数据库
 	if err := repository.InitDB(); err != nil {

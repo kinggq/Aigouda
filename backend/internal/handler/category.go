@@ -9,26 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CategoryHandler struct {
-	categoryService *service.CategoryService
-}
-
-func NewCategoryHandler() *CategoryHandler {
-	return &CategoryHandler{
-		categoryService: service.NewCategoryService(),
-	}
-}
-
-// List 获取分类列表
-func (h *CategoryHandler) List(c *gin.Context) {
+// CategoryList 获取分类列表
+func CategoryList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	search := c.Query("search")
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	keyword := c.Query("keyword")
 
-	categories, total, err := h.categoryService.List(page, pageSize, search)
+	categories, total, err := service.GetCategoryList(page, pageSize, keyword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
@@ -41,21 +31,21 @@ func (h *CategoryHandler) List(c *gin.Context) {
 	})
 }
 
-// Get 获取单个分类
-func (h *CategoryHandler) Get(c *gin.Context) {
+// GetCategory 获取分类详情
+func GetCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的分类ID",
 		})
 		return
 	}
 
-	category, err := h.categoryService.Get(uint(id))
+	category, err := service.GetCategory(uint(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
@@ -67,37 +57,38 @@ func (h *CategoryHandler) Get(c *gin.Context) {
 	})
 }
 
-// Create 创建分类
-func (h *CategoryHandler) Create(c *gin.Context) {
+// CreateCategory 创建分类
+func CreateCategory(c *gin.Context) {
 	var category model.Category
 	if err := c.ShouldBindJSON(&category); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": err.Error(),
+			"code":    400,
+			"message": "请求参数错误",
 		})
 		return
 	}
 
-	if err := h.categoryService.Create(&category); err != nil {
+	if err := service.CreateCategory(&category); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"data": category,
+		"code":    0,
+		"message": "创建成功",
+		"data":    category,
 	})
 }
 
-// Update 更新分类
-func (h *CategoryHandler) Update(c *gin.Context) {
+// UpdateCategory 更新分类
+func UpdateCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的分类ID",
 		})
 		return
@@ -106,73 +97,49 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 	var category model.Category
 	if err := c.ShouldBindJSON(&category); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
-			"message": err.Error(),
+			"code":    400,
+			"message": "请求参数错误",
 		})
 		return
 	}
 
 	category.ID = uint(id)
-	if err := h.categoryService.Update(&category); err != nil {
+	if err := service.UpdateCategory(&category); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"data": category,
+		"code":    0,
+		"message": "更新成功",
+		"data":    category,
 	})
 }
 
-// Delete 删除分类
-func (h *CategoryHandler) Delete(c *gin.Context) {
+// DeleteCategory 删除分类
+func DeleteCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    1,
+			"code":    400,
 			"message": "无效的分类ID",
 		})
 		return
 	}
 
-	if err := h.categoryService.Delete(uint(id)); err != nil {
+	if err := service.DeleteCategory(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    1,
+			"code":    500,
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
+		"code":    0,
 		"message": "删除成功",
-	})
-}
-
-// GetProducts 获取分类下的商品
-func (h *CategoryHandler) GetProducts(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的分类ID"})
-		return
-	}
-
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-
-	products, total, err := h.categoryService.GetProducts(uint(id), page, pageSize)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
 	})
 } 

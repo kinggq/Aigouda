@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 
-// 基础 URL 配置
-const BASE_URL = 'http://localhost:8080'
+// 从环境变量获取基础URL，如果没有则使用默认值
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 // 转换后端数据为前端格式
 function transformResponse(data) {

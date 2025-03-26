@@ -67,9 +67,13 @@ const onFinish = async (values) => {
   loading.value = true
   try {
     const res = await login(values)
-    localStorage.setItem('token', res.token)
-    message.success('登录成功')
-    router.push('/')
+    if (res.code === 0 && res.data && res.data.token) {
+      localStorage.setItem('token', res.data.token)
+      message.success('登录成功')
+      router.push('/')
+    } else {
+      message.error(res.message || '登录失败')
+    }
   } catch (error) {
     console.error('登录失败:', error)
     message.error(error.response?.data?.message || '登录失败')
