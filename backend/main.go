@@ -5,6 +5,7 @@ import (
 	"aigouda/internal/repository"
 	"aigouda/internal/router"
 	"log"
+	"os"
 )
 
 func main() {
@@ -21,8 +22,15 @@ func main() {
 	// 设置路由
 	r := router.SetupRouter()
 
+	// 获取端口
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	// 启动服务器
-	if err := r.Run(":8080"); err != nil {
+	log.Printf("Server starting on port %s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 } 

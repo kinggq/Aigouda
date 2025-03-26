@@ -1,5 +1,8 @@
 [phases.setup]
-nixPkgs = ['go_1_21']
+nixPkgs = ['go_1_21', 'mysql', 'gcc']
 
 [phases.install]
-cmds = ['go version'] 
+cmds = ['go version']
+
+[start]
+cmd = "cd backend && go run main.go" 
