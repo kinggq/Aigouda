@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd backend && go build -o aigouda"
-startCommand = "cd backend && ./main"  # 进入 backend 目录并启动应用
+buildCommand = "cd backend && go mod tidy"
+
 [deploy]
-# startCommand = "./backend/aigouda"
+startCommand = "cd backend && go run main.go"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
