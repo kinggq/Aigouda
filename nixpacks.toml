@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ['go_1_21']
+
+[phases.install]
+cmds = ['go version'] 

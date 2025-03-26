@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
 buildCommand = "cd backend && go mod tidy"
+nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
 startCommand = "cd backend && go run main.go"
