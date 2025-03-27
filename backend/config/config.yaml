@@ -1,8 +1,8 @@
 mysql:
-  host: localhost
+  host: mysql.railway.internal
   port: 3306
   user: root
-  password: ""
+  password: "IhOrQfqQDzvShPaxgUkpXouVfmeiBMka"
   dbname: aigouda
 
 jwt:
